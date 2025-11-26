@@ -160,6 +160,8 @@ warn_unused_ignores = true
 show_error_codes = true
 namespace_packages = true
 explicit_package_bases = true
+mypy_path = ["src"]
+packages = ["arff_csv"]
 
 [[tool.mypy.overrides]]
 module = ["pandas.*", "numpy.*"]
