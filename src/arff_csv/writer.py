@@ -79,10 +79,10 @@ class ArffWriter:
         filepath = Path(filepath)
 
         try:
-            with open(filepath, "w", encoding="utf-8") as f:
+            with filepath.open("w", encoding="utf-8") as f:
                 self.write(data, f, relation_name, comments)
         except OSError as e:
-            raise ArffWriteError(f"Failed to write ARFF file: {e}")
+            raise ArffWriteError(f"Failed to write ARFF file: {e}") from e
 
     def write_string(
         self,
@@ -245,7 +245,7 @@ class ArffWriter:
                     return f"'{value.strftime(attr.date_format)}'"
                 return f"'{value.isoformat()}'"
             # For string dates, always quote to satisfy ARFF DATE syntax
-            return f"'{str(value)}'"
+            return f"'{value!s}'"
 
         # STRING or NOMINAL
         return self._quote_if_needed(str(value))
@@ -329,7 +329,7 @@ class ArffWriter:
                 continue
 
             # Check for object dtype - could be string or nominal
-            if dtype == object:
+            if pd.api.types.is_object_dtype(dtype):
                 # Check if should be treated as nominal
                 if self.nominal_threshold is not None:
                     unique_count = df[col].nunique()
@@ -379,7 +379,7 @@ class ArffWriter:
 
         # Make a copy to avoid modifying the original
         df = df.copy()
-        
+
         attributes = []
 
         for col in df.columns:
@@ -393,9 +393,7 @@ class ArffWriter:
                         date_format=date_columns[col],
                     )
                 )
-            elif pd.api.types.is_complex_dtype(dtype):
-                attributes.append(Attribute(name=col, type=AttributeType.STRING))
-            elif col in string_columns:
+            elif pd.api.types.is_complex_dtype(dtype) or col in string_columns:
                 attributes.append(Attribute(name=col, type=AttributeType.STRING))
             elif col in nominal_columns or isinstance(dtype, pd.CategoricalDtype):
                 if isinstance(dtype, pd.CategoricalDtype):
@@ -411,7 +409,7 @@ class ArffWriter:
                         if isinstance(x, (float, np.floating)) and x == int(x):
                             return str(int(x))
                         return str(x)
-                    
+
                     df[col] = df[col].apply(convert_to_str)
                     values = sorted(df[col].dropna().unique().astype(str).tolist())
                 attributes.append(

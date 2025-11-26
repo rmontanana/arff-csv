@@ -155,7 +155,7 @@ class ArffParser:
         if not filepath.exists():
             raise FileNotFoundError(f"ARFF file not found: {filepath}")
 
-        with open(filepath, encoding="utf-8") as f:
+        with filepath.open(encoding="utf-8") as f:
             return self.parse(f)
 
     def parse_string(self, content: str) -> ArffData:
@@ -365,9 +365,7 @@ class ArffParser:
 
         return values
 
-    def _parse_data_row(
-        self, line: str, num_attributes: int, line_number: int
-    ) -> list[str]:
+    def _parse_data_row(self, line: str, num_attributes: int, line_number: int) -> list[str]:
         """Parse a data row.
 
         Handles:
@@ -424,9 +422,7 @@ class ArffParser:
 
         return values
 
-    def _parse_sparse_row(
-        self, line: str, num_attributes: int, line_number: int
-    ) -> list[str]:
+    def _parse_sparse_row(self, line: str, num_attributes: int, line_number: int) -> list[str]:
         """Parse a sparse format data row.
 
         Sparse format: {index value, index value, ...}
@@ -464,12 +460,12 @@ class ArffParser:
                         line,
                     )
                 values[idx] = self._clean_value(parts[1])
-            except ValueError:
+            except ValueError as e:
                 raise ArffParseError(
                     f"Invalid sparse index: {parts[0]}",
                     line_number,
                     line,
-                )
+                ) from e
 
         return values
 
@@ -517,9 +513,7 @@ class ArffParser:
                 if attr.nominal_values:
                     # Ensure data values are strings to match category strings
                     # This handles cases where numeric-looking values need to match
-                    df[col] = df[col].apply(
-                        lambda x: str(x).strip() if pd.notna(x) else x
-                    )
+                    df[col] = df[col].apply(lambda x: str(x).strip() if pd.notna(x) else x)
                     df[col] = pd.Categorical(
                         df[col],
                         categories=attr.nominal_values,

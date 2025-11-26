@@ -4,21 +4,22 @@ Tests for the main converter module.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
 
-from arff_csv.converter import ArffConverter, csv_to_arff, arff_to_csv
-from arff_csv.exceptions import CsvParseError, ArffParseError
+from arff_csv.converter import ArffConverter, arff_to_csv, csv_to_arff
+from arff_csv.exceptions import CsvParseError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestArffConverter:
     """Tests for ArffConverter class."""
 
-    def test_csv_to_arff(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test CSV to ARFF conversion."""
         converter = ArffConverter()
         output_path = temp_dir / "output.arff"
@@ -33,9 +34,7 @@ class TestArffConverter:
         assert arff_data.relation_name == "test_data"
         assert len(arff_data.data) > 0
 
-    def test_csv_to_arff_default_relation_name(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff_default_relation_name(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test CSV to ARFF with default relation name."""
         converter = ArffConverter()
         output_path = temp_dir / "output.arff"
@@ -45,9 +44,7 @@ class TestArffConverter:
         # Relation name should be the CSV filename without extension
         assert arff_data.relation_name == "sample"
 
-    def test_csv_to_arff_with_nominal_columns(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff_with_nominal_columns(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test CSV to ARFF with specified nominal columns."""
         converter = ArffConverter()
         output_path = temp_dir / "output.arff"
@@ -59,13 +56,12 @@ class TestArffConverter:
         )
 
         # Find name attribute
-        name_attr = [a for a in arff_data.attributes if a.name == "name"][0]
+        name_attr = next(a for a in arff_data.attributes if a.name == "name")
         from arff_csv.parser import AttributeType
+
         assert name_attr.type == AttributeType.NOMINAL
 
-    def test_csv_to_arff_with_comments(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff_with_comments(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test CSV to ARFF with comments."""
         converter = ArffConverter()
         output_path = temp_dir / "output.arff"
@@ -92,9 +88,7 @@ class TestArffConverter:
         with pytest.raises(FileNotFoundError):
             converter.csv_to_arff("/nonexistent.csv", output_path)
 
-    def test_csv_to_arff_with_excluded_columns(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff_with_excluded_columns(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test CSV to ARFF excluding specific columns."""
         converter = ArffConverter()
         output_path = temp_dir / "output.arff"
@@ -122,9 +116,7 @@ class TestArffConverter:
                 exclude_columns=["does_not_exist"],
             )
 
-    def test_arff_to_csv(
-        self, sample_arff_file: Path, temp_dir: Path
-    ) -> None:
+    def test_arff_to_csv(self, sample_arff_file: Path, temp_dir: Path) -> None:
         """Test ARFF to CSV conversion."""
         converter = ArffConverter()
         output_path = temp_dir / "output.csv"
@@ -143,9 +135,7 @@ class TestArffConverter:
         with pytest.raises(FileNotFoundError):
             converter.arff_to_csv("/nonexistent.arff", output_path)
 
-    def test_round_trip_conversion(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_round_trip_conversion(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test round-trip CSV -> ARFF -> CSV conversion."""
         converter = ArffConverter()
         arff_path = temp_dir / "intermediate.arff"
@@ -184,9 +174,7 @@ class TestArffConverter:
         assert "sepallength" in content
         assert "5.1" in content
 
-    def test_dataframe_to_arff(
-        self, sample_dataframe: pd.DataFrame, temp_dir: Path
-    ) -> None:
+    def test_dataframe_to_arff(self, sample_dataframe: pd.DataFrame, temp_dir: Path) -> None:
         """Test converting DataFrame to ARFF file."""
         converter = ArffConverter()
         output_path = temp_dir / "output.arff"
@@ -210,9 +198,7 @@ class TestArffConverter:
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
-    def test_dataframe_to_arff_string(
-        self, sample_dataframe: pd.DataFrame
-    ) -> None:
+    def test_dataframe_to_arff_string(self, sample_dataframe: pd.DataFrame) -> None:
         """Test converting DataFrame to ARFF string."""
         converter = ArffConverter()
 
@@ -233,9 +219,7 @@ class TestArffConverter:
         assert isinstance(df, pd.DataFrame)
         assert "sepallength" in df.columns
 
-    def test_csv_kwargs_passed(
-        self, temp_dir: Path
-    ) -> None:
+    def test_csv_kwargs_passed(self, temp_dir: Path) -> None:
         """Test that CSV kwargs are passed correctly."""
         # Create a CSV with custom delimiter
         csv_path = temp_dir / "custom.csv"
@@ -271,9 +255,7 @@ class TestArffConverter:
 class TestConvenienceFunctions:
     """Tests for convenience functions."""
 
-    def test_csv_to_arff_function(
-        self, sample_csv_file: Path, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff_function(self, sample_csv_file: Path, temp_dir: Path) -> None:
         """Test csv_to_arff convenience function."""
         output_path = temp_dir / "output.arff"
 
@@ -286,9 +268,7 @@ class TestConvenienceFunctions:
         assert output_path.exists()
         assert arff_data.relation_name == "test"
 
-    def test_arff_to_csv_function(
-        self, sample_arff_file: Path, temp_dir: Path
-    ) -> None:
+    def test_arff_to_csv_function(self, sample_arff_file: Path, temp_dir: Path) -> None:
         """Test arff_to_csv convenience function."""
         output_path = temp_dir / "output.csv"
 
@@ -297,9 +277,7 @@ class TestConvenienceFunctions:
         assert output_path.exists()
         assert isinstance(df, pd.DataFrame)
 
-    def test_csv_to_arff_with_custom_missing(
-        self, temp_dir: Path
-    ) -> None:
+    def test_csv_to_arff_with_custom_missing(self, temp_dir: Path) -> None:
         """Test csv_to_arff with custom missing value."""
         # Create CSV with custom missing value
         csv_path = temp_dir / "input.csv"
@@ -307,7 +285,7 @@ class TestConvenienceFunctions:
 
         output_path = temp_dir / "output.arff"
 
-        arff_data = csv_to_arff(
+        csv_to_arff(
             csv_path,
             output_path,
             missing_value="NA",
@@ -316,9 +294,7 @@ class TestConvenienceFunctions:
         content = output_path.read_text()
         assert "NA" in content
 
-    def test_arff_to_csv_include_index(
-        self, sample_arff_file: Path, temp_dir: Path
-    ) -> None:
+    def test_arff_to_csv_include_index(self, sample_arff_file: Path, temp_dir: Path) -> None:
         """Test arff_to_csv with index included."""
         output_path = temp_dir / "output.csv"
 
@@ -362,11 +338,13 @@ class TestEdgeCases:
     def test_large_dataset(self, temp_dir: Path) -> None:
         """Test with a larger dataset."""
         # Create a DataFrame with 1000 rows
-        df = pd.DataFrame({
-            "id": range(1000),
-            "value": [i * 0.1 for i in range(1000)],
-            "category": pd.Categorical(["A", "B", "C"] * 333 + ["A"]),
-        })
+        df = pd.DataFrame(
+            {
+                "id": range(1000),
+                "value": [i * 0.1 for i in range(1000)],
+                "category": pd.Categorical(["A", "B", "C"] * 333 + ["A"]),
+            }
+        )
 
         csv_path = temp_dir / "large.csv"
         df.to_csv(csv_path, index=False)
@@ -393,4 +371,6 @@ class TestEdgeCases:
 
         arff_data = converter.csv_to_arff(csv_path, arff_path)
 
-        assert "Älice" in arff_data.data["name"].values or "Älice" in str(arff_data.data["name"].values)
+        assert "Älice" in arff_data.data["name"].values or "Älice" in str(
+            arff_data.data["name"].values
+        )

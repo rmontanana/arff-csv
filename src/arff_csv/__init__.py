@@ -10,9 +10,7 @@ This module provides functionality to:
 - Preserve data integrity during conversions
 """
 
-from arff_csv.converter import ArffConverter, csv_to_arff, arff_to_csv
-from arff_csv.parser import ArffParser, ArffData
-from arff_csv.writer import ArffWriter
+from arff_csv.converter import ArffConverter, arff_to_csv, csv_to_arff
 from arff_csv.exceptions import (
     ArffCsvError,
     ArffParseError,
@@ -21,30 +19,27 @@ from arff_csv.exceptions import (
     InvalidAttributeError,
     MissingDataError,
 )
+from arff_csv.parser import ArffData, ArffParser
+from arff_csv.writer import ArffWriter
 
 __version__ = "1.0.0"
 __author__ = "Ricardo Montañana"
 __email__ = "ricardo.montanana@example.com"
 
 __all__ = [
-    # Main converter class and functions
     "ArffConverter",
-    "csv_to_arff",
-    "arff_to_csv",
-    # Parser
-    "ArffParser",
-    "ArffData",
-    # Writer
-    "ArffWriter",
-    # Exceptions
     "ArffCsvError",
+    "ArffData",
     "ArffParseError",
+    "ArffParser",
     "ArffWriteError",
+    "ArffWriter",
     "CsvParseError",
     "InvalidAttributeError",
     "MissingDataError",
-    # Metadata
-    "__version__",
     "__author__",
     "__email__",
+    "__version__",
+    "arff_to_csv",
+    "csv_to_arff",
 ]

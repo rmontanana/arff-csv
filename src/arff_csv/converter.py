@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 from arff_csv.exceptions import CsvParseError
-from arff_csv.parser import ArffData, ArffParser, Attribute, AttributeType
+from arff_csv.parser import ArffData, ArffParser
 from arff_csv.writer import ArffWriter
 
 
@@ -87,9 +87,7 @@ class ArffConverter:
 
         filtered_nominal = [col for col in nominal_columns if col in filtered_columns]
         filtered_string = [col for col in string_columns if col in filtered_columns]
-        filtered_dates = {
-            col: fmt for col, fmt in date_columns.items() if col in filtered_columns
-        }
+        filtered_dates = {col: fmt for col, fmt in date_columns.items() if col in filtered_columns}
 
         return filtered_df, filtered_nominal, filtered_string, filtered_dates
 
@@ -118,7 +116,6 @@ class ArffConverter:
     @staticmethod
     def _validate_column_alignment(
         csv_path: Path,
-        df: pd.DataFrame,
         csv_kwargs: dict[str, object],
     ) -> None:
         """Validate that the parsed DataFrame does not have more columns than the header."""
@@ -198,12 +195,11 @@ class ArffConverter:
         try:
             df = pd.read_csv(csv_path, **csv_kwargs)
         except Exception as e:
-            raise CsvParseError(f"Failed to read CSV file: {e}")
+            raise CsvParseError(f"Failed to read CSV file: {e}") from e
 
         df = self._normalize_unnamed_columns(df)
         self._validate_column_alignment(
             csv_path=csv_path,
-            df=df,
             csv_kwargs=csv_kwargs,
         )
 
@@ -303,12 +299,11 @@ class ArffConverter:
         try:
             df = pd.read_csv(csv_path, **csv_kwargs)
         except Exception as e:
-            raise CsvParseError(f"Failed to read CSV file: {e}")
+            raise CsvParseError(f"Failed to read CSV file: {e}") from e
 
         df = self._normalize_unnamed_columns(df)
         self._validate_column_alignment(
             csv_path=csv_path,
-            df=df,
             csv_kwargs=csv_kwargs,
         )
 

@@ -4,15 +4,16 @@ Tests for the ARFF parser module.
 
 from __future__ import annotations
 
-from io import StringIO
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from arff_csv.parser import ArffParser, ArffData, Attribute, AttributeType
 from arff_csv.exceptions import ArffParseError, MissingDataError
+from arff_csv.parser import ArffParser, Attribute, AttributeType
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestArffParser:
@@ -40,8 +41,7 @@ class TestArffParser:
         arff_data = parser.parse_string(sample_arff_content)
 
         attr_names = arff_data.get_attribute_names()
-        assert attr_names == ["sepallength", "sepalwidth", "petallength", 
-                             "petalwidth", "class"]
+        assert attr_names == ["sepallength", "sepalwidth", "petallength", "petalwidth", "class"]
 
         # Check numeric attributes
         numeric_attrs = arff_data.get_numeric_attributes()
@@ -58,9 +58,7 @@ class TestArffParser:
 
         class_attr = arff_data.attributes[-1]
         assert class_attr.type == AttributeType.NOMINAL
-        assert class_attr.nominal_values == [
-            "Iris-setosa", "Iris-versicolor", "Iris-virginica"
-        ]
+        assert class_attr.nominal_values == ["Iris-setosa", "Iris-versicolor", "Iris-virginica"]
 
     def test_parse_data_values(self, sample_arff_content: str) -> None:
         """Test that data values are correctly parsed."""

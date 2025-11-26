@@ -5,15 +5,18 @@ Tests for the ARFF writer module.
 from __future__ import annotations
 
 from io import StringIO
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from arff_csv.writer import ArffWriter
-from arff_csv.parser import ArffParser, ArffData, Attribute, AttributeType
 from arff_csv.exceptions import ArffWriteError
+from arff_csv.parser import ArffParser, AttributeType
+from arff_csv.writer import ArffWriter
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestArffWriter:
@@ -60,21 +63,19 @@ class TestArffWriter:
         writer = ArffWriter()
 
         comments = ["This is a test file", "Generated for testing"]
-        content = writer.write_string(
-            sample_dataframe, 
-            relation_name="test",
-            comments=comments
-        )
+        content = writer.write_string(sample_dataframe, relation_name="test", comments=comments)
 
         assert "% This is a test file" in content
         assert "% Generated for testing" in content
 
     def test_write_numeric_attributes(self) -> None:
         """Test writing numeric attributes."""
-        df = pd.DataFrame({
-            "int_col": [1, 2, 3],
-            "float_col": [1.5, 2.5, 3.5],
-        })
+        df = pd.DataFrame(
+            {
+                "int_col": [1, 2, 3],
+                "float_col": [1.5, 2.5, 3.5],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -84,9 +85,11 @@ class TestArffWriter:
 
     def test_write_categorical_as_nominal(self) -> None:
         """Test writing categorical columns as nominal."""
-        df = pd.DataFrame({
-            "category": pd.Categorical(["a", "b", "a", "c"]),
-        })
+        df = pd.DataFrame(
+            {
+                "category": pd.Categorical(["a", "b", "a", "c"]),
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -95,9 +98,11 @@ class TestArffWriter:
 
     def test_write_string_attributes(self) -> None:
         """Test writing string attributes."""
-        df = pd.DataFrame({
-            "name": ["Alice", "Bob", "Charlie"],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["Alice", "Bob", "Charlie"],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -107,9 +112,11 @@ class TestArffWriter:
 
     def test_write_boolean_as_nominal(self) -> None:
         """Test writing boolean columns as nominal."""
-        df = pd.DataFrame({
-            "flag": [True, False, True],
-        })
+        df = pd.DataFrame(
+            {
+                "flag": [True, False, True],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -118,9 +125,11 @@ class TestArffWriter:
 
     def test_write_datetime_attributes(self) -> None:
         """Test writing datetime attributes."""
-        df = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -130,19 +139,18 @@ class TestArffWriter:
     def test_write_missing_values(self, sample_dataframe_with_missing: pd.DataFrame) -> None:
         """Test writing missing values as ?."""
         writer = ArffWriter()
-        content = writer.write_string(
-            sample_dataframe_with_missing, 
-            relation_name="test"
-        )
+        content = writer.write_string(sample_dataframe_with_missing, relation_name="test")
 
         # Check that missing values are represented as ?
         assert "?" in content
 
     def test_write_custom_missing_value(self) -> None:
         """Test writing with custom missing value."""
-        df = pd.DataFrame({
-            "a": [1.0, np.nan, 3.0],
-        })
+        df = pd.DataFrame(
+            {
+                "a": [1.0, np.nan, 3.0],
+            }
+        )
 
         writer = ArffWriter(missing_value="NA")
         content = writer.write_string(df, relation_name="test")
@@ -151,9 +159,11 @@ class TestArffWriter:
 
     def test_write_quoted_values(self) -> None:
         """Test writing values that need quoting."""
-        df = pd.DataFrame({
-            "text": ["hello world", "comma, here", "quote's test"],
-        })
+        df = pd.DataFrame(
+            {
+                "text": ["hello world", "comma, here", "quote's test"],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -214,11 +224,13 @@ class TestArffWriter:
 
     def test_from_dataframe(self) -> None:
         """Test creating ArffData from DataFrame."""
-        df = pd.DataFrame({
-            "id": [1, 2, 3],
-            "name": ["Alice", "Bob", "Charlie"],
-            "category": ["a", "b", "a"],
-        })
+        df = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "name": ["Alice", "Bob", "Charlie"],
+                "category": ["a", "b", "a"],
+            }
+        )
 
         arff_data = ArffWriter.from_dataframe(
             df,
@@ -238,10 +250,12 @@ class TestArffWriter:
 
     def test_from_dataframe_with_date_columns(self) -> None:
         """Test creating ArffData with date columns specified."""
-        df = pd.DataFrame({
-            "date_str": ["2024-01-01", "2024-01-02"],
-            "value": [1, 2],
-        })
+        df = pd.DataFrame(
+            {
+                "date_str": ["2024-01-01", "2024-01-02"],
+                "value": [1, 2],
+            }
+        )
 
         arff_data = ArffWriter.from_dataframe(
             df,
@@ -249,16 +263,18 @@ class TestArffWriter:
             date_columns={"date_str": "%Y-%m-%d"},
         )
 
-        date_attr = [a for a in arff_data.attributes if a.name == "date_str"][0]
+        date_attr = next(a for a in arff_data.attributes if a.name == "date_str")
         assert date_attr.type == AttributeType.DATE
         assert date_attr.date_format == "%Y-%m-%d"
 
     def test_nominal_threshold(self) -> None:
         """Test automatic nominal detection with threshold."""
-        df = pd.DataFrame({
-            "category": ["a", "b", "a", "b", "c"],  # 3 unique values
-            "values": list(range(5)),  # 5 unique values
-        })
+        df = pd.DataFrame(
+            {
+                "category": ["a", "b", "a", "b", "c"],  # 3 unique values
+                "values": list(range(5)),  # 5 unique values
+            }
+        )
 
         writer = ArffWriter(nominal_threshold=4)
         content = writer.write_string(df, relation_name="test")
@@ -268,9 +284,11 @@ class TestArffWriter:
 
     def test_write_integer_values(self) -> None:
         """Test that integer values are written without decimals."""
-        df = pd.DataFrame({
-            "int_col": [1, 2, 3],
-        })
+        df = pd.DataFrame(
+            {
+                "int_col": [1, 2, 3],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -280,9 +298,11 @@ class TestArffWriter:
 
     def test_write_float_values(self) -> None:
         """Test that float values are written correctly."""
-        df = pd.DataFrame({
-            "float_col": [1.5, 2.5, 3.0],
-        })
+        df = pd.DataFrame(
+            {
+                "float_col": [1.5, 2.5, 3.0],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")

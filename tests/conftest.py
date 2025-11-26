@@ -4,11 +4,13 @@ Pytest configuration and fixtures for arff_csv tests.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -103,25 +105,29 @@ def sample_arff_date() -> str:
 @pytest.fixture
 def sample_dataframe() -> pd.DataFrame:
     """Sample DataFrame for testing CSV to ARFF conversion."""
-    return pd.DataFrame({
-        "id": [1, 2, 3, 4, 5],
-        "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
-        "age": [25, 30, 35, 28, 32],
-        "score": [85.5, 92.3, 78.9, 88.1, 95.0],
-        "passed": pd.Categorical(["yes", "yes", "no", "yes", "yes"]),
-    })
+    return pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5],
+            "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
+            "age": [25, 30, 35, 28, 32],
+            "score": [85.5, 92.3, 78.9, 88.1, 95.0],
+            "passed": pd.Categorical(["yes", "yes", "no", "yes", "yes"]),
+        }
+    )
 
 
 @pytest.fixture
 def sample_dataframe_with_missing() -> pd.DataFrame:
     """Sample DataFrame with missing values."""
     import numpy as np
-    
-    return pd.DataFrame({
-        "a": [1.0, np.nan, 3.0, 4.0],
-        "b": ["hello", "world", np.nan, "test"],
-        "c": pd.Categorical(["yes", "no", "yes", np.nan]),
-    })
+
+    return pd.DataFrame(
+        {
+            "a": [1.0, np.nan, 3.0, 4.0],
+            "b": ["hello", "world", np.nan, "test"],
+            "c": pd.Categorical(["yes", "no", "yes", np.nan]),
+        }
+    )
 
 
 @pytest.fixture

@@ -4,26 +4,25 @@ Additional tests for increased code coverage.
 
 from __future__ import annotations
 
-from pathlib import Path
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-import numpy as np
 import pandas as pd
 import pytest
 
 from arff_csv.cli import main
-from arff_csv.converter import ArffConverter, csv_to_arff
+from arff_csv.converter import ArffConverter
+from arff_csv.exceptions import ArffParseError, CsvParseError
 from arff_csv.parser import ArffParser, AttributeType
 from arff_csv.writer import ArffWriter
-from arff_csv.exceptions import ArffParseError, CsvParseError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestCLICoverage:
     """Additional CLI tests for coverage."""
 
-    def test_csv2arff_arff_error(
-        self, temp_dir: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_csv2arff_arff_error(self, temp_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """Test csv2arff with ArffCsvError (invalid CSV)."""
         # Create an invalid CSV that will cause a parsing error
         csv_path = temp_dir / "invalid.csv"
@@ -31,19 +30,19 @@ class TestCLICoverage:
 
         output_path = temp_dir / "output.arff"
 
-        result = main([
-            "csv2arff",
-            str(csv_path),
-            str(output_path),
-        ])
+        result = main(
+            [
+                "csv2arff",
+                str(csv_path),
+                str(output_path),
+            ]
+        )
 
         assert result == 1
         captured = capsys.readouterr()
         assert "Error" in captured.err or "error" in captured.err.lower()
 
-    def test_arff2csv_arff_error(
-        self, temp_dir: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_arff2csv_arff_error(self, temp_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """Test arff2csv with ArffCsvError (invalid ARFF)."""
         # Create an invalid ARFF
         arff_path = temp_dir / "invalid.arff"
@@ -51,11 +50,13 @@ class TestCLICoverage:
 
         output_path = temp_dir / "output.csv"
 
-        result = main([
-            "arff2csv",
-            str(arff_path),
-            str(output_path),
-        ])
+        result = main(
+            [
+                "arff2csv",
+                str(arff_path),
+                str(output_path),
+            ]
+        )
 
         assert result == 1
         captured = capsys.readouterr()
@@ -133,21 +134,23 @@ val3
         captured = capsys.readouterr()
         assert "Error" in captured.err
 
-    def test_csv2arff_with_string_columns(
-        self, temp_dir: Path
-    ) -> None:
+    def test_csv2arff_with_string_columns(self, temp_dir: Path) -> None:
         """Test csv2arff with string columns option."""
         csv_path = temp_dir / "input.csv"
         csv_path.write_text("id,name,desc\n1,Alice,Hello\n2,Bob,World")
 
         output_path = temp_dir / "output.arff"
 
-        result = main([
-            "csv2arff",
-            str(csv_path),
-            str(output_path),
-            "-s", "name", "desc",
-        ])
+        result = main(
+            [
+                "csv2arff",
+                str(csv_path),
+                str(output_path),
+                "-s",
+                "name",
+                "desc",
+            ]
+        )
 
         assert result == 0
         content = output_path.read_text()
@@ -162,16 +165,18 @@ val3
         output_path = temp_dir / "output.arff"
 
         # Mock to raise an unexpected error
-        def mock_csv_to_arff(*args, **kwargs):
+        def mock_csv_to_arff(*_args, **_kwargs):
             raise RuntimeError("Unexpected error")
 
         monkeypatch.setattr(ArffConverter, "csv_to_arff", mock_csv_to_arff)
 
-        result = main([
-            "csv2arff",
-            str(csv_path),
-            str(output_path),
-        ])
+        result = main(
+            [
+                "csv2arff",
+                str(csv_path),
+                str(output_path),
+            ]
+        )
 
         assert result == 1
         captured = capsys.readouterr()
@@ -186,16 +191,18 @@ val3
         output_path = temp_dir / "output.csv"
 
         # Mock to raise an unexpected error
-        def mock_arff_to_csv(*args, **kwargs):
+        def mock_arff_to_csv(*_args, **_kwargs):
             raise RuntimeError("Unexpected error")
 
         monkeypatch.setattr(ArffConverter, "arff_to_csv", mock_arff_to_csv)
 
-        result = main([
-            "arff2csv",
-            str(arff_path),
-            str(output_path),
-        ])
+        result = main(
+            [
+                "arff2csv",
+                str(arff_path),
+                str(output_path),
+            ]
+        )
 
         assert result == 1
         captured = capsys.readouterr()
@@ -209,7 +216,7 @@ val3
         arff_path.write_text("@RELATION test\n@ATTRIBUTE a NUMERIC\n@DATA\n1")
 
         # Mock to raise an unexpected error
-        def mock_parse_file(*args, **kwargs):
+        def mock_parse_file(*_args, **_kwargs):
             raise RuntimeError("Unexpected error")
 
         monkeypatch.setattr(ArffParser, "parse_file", mock_parse_file)
@@ -274,9 +281,7 @@ class TestConverterCoverage:
         content = output_path.read_text()
         assert "% DataFrame conversion" in content
 
-    def test_dataframe_to_arff_string_with_comments(
-        self, sample_dataframe: pd.DataFrame
-    ) -> None:
+    def test_dataframe_to_arff_string_with_comments(self, sample_dataframe: pd.DataFrame) -> None:
         """Test dataframe_to_arff_string with comments."""
         converter = ArffConverter()
         comments = ["String conversion", "With comments"]
@@ -303,7 +308,7 @@ class TestConverterCoverage:
             date_columns={"date": "%Y-%m-%d"},
         )
 
-        date_attr = [a for a in arff_data.attributes if a.name == "date"][0]
+        date_attr = next(a for a in arff_data.attributes if a.name == "date")
         assert date_attr.type == AttributeType.DATE
 
     def test_csv_to_arff_string_with_date_columns(self, temp_dir: Path) -> None:
@@ -510,10 +515,12 @@ class TestWriterCoverage:
 
     def test_write_datetime_with_timestamp(self) -> None:
         """Test writing datetime values as Timestamp."""
-        df = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-15 10:30:00", "2024-02-20 14:45:00"]),
-            "value": [1, 2],
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-15 10:30:00", "2024-02-20 14:45:00"]),
+                "value": [1, 2],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -522,9 +529,11 @@ class TestWriterCoverage:
 
     def test_write_empty_string_value(self) -> None:
         """Test writing empty string values."""
-        df = pd.DataFrame({
-            "text": ["hello", "", "world"],
-        })
+        df = pd.DataFrame(
+            {
+                "text": ["hello", "", "world"],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -533,9 +542,11 @@ class TestWriterCoverage:
 
     def test_write_value_with_curly_braces(self) -> None:
         """Test writing values with curly braces."""
-        df = pd.DataFrame({
-            "text": ["normal", "{special}", "value"],
-        })
+        df = pd.DataFrame(
+            {
+                "text": ["normal", "{special}", "value"],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -544,9 +555,11 @@ class TestWriterCoverage:
 
     def test_write_nominal_with_special_chars(self) -> None:
         """Test writing nominal values with special characters."""
-        df = pd.DataFrame({
-            "category": pd.Categorical(["a b", "c,d", "e%f"]),
-        })
+        df = pd.DataFrame(
+            {
+                "category": pd.Categorical(["a b", "c,d", "e%f"]),
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -556,21 +569,25 @@ class TestWriterCoverage:
 
     def test_from_dataframe_with_datetime_column(self) -> None:
         """Test from_dataframe with datetime column detection."""
-        df = pd.DataFrame({
-            "created": pd.to_datetime(["2024-01-15", "2024-02-20"]),
-            "value": [1, 2],
-        })
+        df = pd.DataFrame(
+            {
+                "created": pd.to_datetime(["2024-01-15", "2024-02-20"]),
+                "value": [1, 2],
+            }
+        )
 
         arff_data = ArffWriter.from_dataframe(df, relation_name="test")
 
-        created_attr = [a for a in arff_data.attributes if a.name == "created"][0]
+        created_attr = next(a for a in arff_data.attributes if a.name == "created")
         assert created_attr.type == AttributeType.DATE
 
     def test_write_integer_as_float_whole_number(self) -> None:
         """Test writing float values that are whole numbers."""
-        df = pd.DataFrame({
-            "value": [1.0, 2.0, 3.0],  # Whole numbers as float
-        })
+        df = pd.DataFrame(
+            {
+                "value": [1.0, 2.0, 3.0],  # Whole numbers as float
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -581,11 +598,13 @@ class TestWriterCoverage:
 
     def test_write_date_without_format(self) -> None:
         """Test writing date attribute without format uses isoformat."""
-        from arff_csv.parser import Attribute, ArffData
+        from arff_csv.parser import ArffData, Attribute
 
-        df = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-15", "2024-02-20"]),
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-15", "2024-02-20"]),
+            }
+        )
 
         # Create ArffData with date attribute without format
         attrs = [Attribute(name="date", type=AttributeType.DATE, date_format=None)]
@@ -598,9 +617,11 @@ class TestWriterCoverage:
 
     def test_write_value_with_double_quote(self) -> None:
         """Test writing values with double quotes."""
-        df = pd.DataFrame({
-            "text": ['hello "world"', "normal"],
-        })
+        df = pd.DataFrame(
+            {
+                "text": ['hello "world"', "normal"],
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -611,9 +632,11 @@ class TestWriterCoverage:
     def test_infer_attributes_default_to_string(self) -> None:
         """Test that unknown dtypes default to string."""
         # Create a DataFrame with a complex dtype
-        df = pd.DataFrame({
-            "data": pd.array([1+2j, 3+4j], dtype=complex),
-        })
+        df = pd.DataFrame(
+            {
+                "data": pd.array([1 + 2j, 3 + 4j], dtype=complex),
+            }
+        )
 
         writer = ArffWriter()
         content = writer.write_string(df, relation_name="test")
@@ -622,11 +645,13 @@ class TestWriterCoverage:
 
     def test_write_date_value_as_string(self) -> None:
         """Test writing date when value is string not datetime."""
-        from arff_csv.parser import Attribute, ArffData
+        from arff_csv.parser import ArffData, Attribute
 
-        df = pd.DataFrame({
-            "date": ["2024-01-15", "2024-02-20"],  # String, not datetime
-        })
+        df = pd.DataFrame(
+            {
+                "date": ["2024-01-15", "2024-02-20"],  # String, not datetime
+            }
+        )
 
         attrs = [Attribute(name="date", type=AttributeType.DATE, date_format="%Y-%m-%d")]
         arff_data = ArffData(relation_name="test", attributes=attrs, data=df)
@@ -648,12 +673,15 @@ class TestCLIStringColumns:
 
         output_path = temp_dir / "output.arff"
 
-        result = main([
-            "csv2arff",
-            str(csv_path),
-            str(output_path),
-            "--string", "b",
-        ])
+        result = main(
+            [
+                "csv2arff",
+                str(csv_path),
+                str(output_path),
+                "--string",
+                "b",
+            ]
+        )
 
         assert result == 0
         content = output_path.read_text()

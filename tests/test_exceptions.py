@@ -55,11 +55,7 @@ class TestArffParseError:
 
     def test_with_line_content(self) -> None:
         """Test error with line content."""
-        error = ArffParseError(
-            "Parse failed", 
-            line_number=42, 
-            line_content="invalid data"
-        )
+        error = ArffParseError("Parse failed", line_number=42, line_content="invalid data")
         assert "line 42" in str(error)
         assert "invalid data" in str(error)
         assert error.line_content == "invalid data"
