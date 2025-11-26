@@ -1,9 +1,9 @@
 # ARFF-CSV Converter
 
-[![Python Version](https://img.shields.io/pypi/pyversions/arff-csv-converter)](https://pypi.org/project/arff-csv-converter/)
-[![PyPI Version](https://img.shields.io/pypi/v/arff-csv-converter)](https://pypi.org/project/arff-csv-converter/)
-[![License](https://img.shields.io/pypi/l/arff-csv-converter)](https://github.com/rmontanana/arff-csv-converter/blob/main/LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/rmontanana/arff-csv-converter/tests.yml?label=tests)](https://github.com/rmontanana/arff-csv-converter/actions)
+[![Tests](https://github.com/rmontanana/arff-csv/actions/workflows/tests.yml/badge.svg)](https://github.com/rmontanana/arff-csv/actions/workflows/tests.yml)
+[![PyPI version](https://badge.fury.io/py/csv-arff-converter.svg)](https://badge.fury.io/py/csv-arff-converter)
+![https://img.shields.io/badge/python-3.11%2B-blue](https://img.shields.io/badge/python-3.11%2B-brightgreen)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/rmontanana/arff-csv)
 
 A Python library for converting between CSV and ARFF (Weka) file formats. ARFF (Attribute-Relation File Format) is the standard file format used by the Weka machine learning toolkit.
 

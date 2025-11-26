@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2024-XX-XX
+## [1.0.0] - 2025-11-26
 
 ### Added
 
@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `InvalidAttributeError`
   - `MissingDataError`
 - Comprehensive test suite with high coverage
-- Support for Python 3.10, 3.11, 3.12, 3.13, and 3.14
+- Support for Python 3.11, 3.12, 3.13, and 3.14
 
 ### Dependencies
 

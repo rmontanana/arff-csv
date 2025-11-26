@@ -504,7 +504,7 @@ class ArffParser:
         for attr in attributes:
             col = attr.name
             # Replace missing values with NaN
-            df[col] = df[col].replace(self.missing_value, np.nan)
+            df[col] = df[col].mask(df[col] == self.missing_value, np.nan)
 
             if attr.is_numeric():
                 df[col] = pd.to_numeric(df[col], errors="coerce")
