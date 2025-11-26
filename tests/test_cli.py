@@ -107,6 +107,23 @@ class TestCLI:
         content = output_path.read_text()
         assert "% Test comment" in content
 
+    def test_csv2arff_with_exclude(
+        self, sample_csv_file: Path, temp_dir: Path
+    ) -> None:
+        """Test csv2arff excluding columns."""
+        output_path = temp_dir / "output.arff"
+
+        result = main([
+            "csv2arff",
+            str(sample_csv_file),
+            str(output_path),
+            "--exclude", "id",
+        ])
+
+        assert result == 0
+        content = output_path.read_text()
+        assert "@ATTRIBUTE id" not in content
+
     def test_csv2arff_file_not_found(self, temp_dir: Path) -> None:
         """Test csv2arff with missing input file."""
         output_path = temp_dir / "output.arff"
@@ -118,6 +135,42 @@ class TestCLI:
         ])
 
         assert result == 1
+
+    def test_csv2arff_exclude_missing_column(
+        self, sample_csv_file: Path, temp_dir: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test csv2arff with an exclude column that does not exist."""
+        output_path = temp_dir / "output.arff"
+
+        result = main([
+            "csv2arff",
+            str(sample_csv_file),
+            str(output_path),
+            "--exclude", "missing",
+        ])
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Exclude columns not found in CSV" in captured.err
+
+    def test_csv2arff_normalizes_unnamed_columns(
+        self, temp_dir: Path
+    ) -> None:
+        """Test csv2arff normalizes pandas Unnamed columns."""
+        csv_path = temp_dir / "unnamed.csv"
+        csv_path.write_text(",b\n1,2\n3,4")
+
+        output_path = temp_dir / "output.arff"
+
+        result = main([
+            "csv2arff",
+            str(csv_path),
+            str(output_path),
+        ])
+
+        assert result == 0
+        content = output_path.read_text()
+        assert "@ATTRIBUTE Unnamed_0" in content
 
     def test_arff2csv_command(
         self, sample_arff_file: Path, temp_dir: Path
@@ -248,3 +301,28 @@ class TestCLIEdgeCases:
         # argparse will handle this with an error
         with pytest.raises(SystemExit):
             main(["invalid_command"])
+
+    def test_analyze_suggests_exclusions(
+        self, temp_dir: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test analyze mode suggests columns to exclude."""
+        csv_path = temp_dir / "analyze.csv"
+        csv_path.write_text(
+            "id,const,value\n"
+            "1,static,10\n"
+            "2,static,20\n"
+            "3,static,30\n"
+        )
+
+        result = main([
+            "csv2arff",
+            str(csv_path),
+            "--analyze",
+        ])
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "COLUMNS SUGGESTED FOR EXCLUSION" in captured.out
+        assert "id: Unique value for every row" in captured.out
+        assert "const: Single unique value" in captured.out
+        assert "--exclude id const" in captured.out

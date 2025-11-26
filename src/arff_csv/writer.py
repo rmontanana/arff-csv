@@ -244,7 +244,8 @@ class ArffWriter:
                 if attr.date_format:
                     return f"'{value.strftime(attr.date_format)}'"
                 return f"'{value.isoformat()}'"
-            return self._quote_if_needed(str(value))
+            # For string dates, always quote to satisfy ARFF DATE syntax
+            return f"'{str(value)}'"
 
         # STRING or NOMINAL
         return self._quote_if_needed(str(value))
@@ -299,6 +300,11 @@ class ArffWriter:
                 attributes.append(
                     Attribute(name=col, type=AttributeType.DATE, date_format="%Y-%m-%d %H:%M:%S")
                 )
+                continue
+
+            # Complex numbers are not supported in ARFF; treat as strings
+            if pd.api.types.is_complex_dtype(dtype):
+                attributes.append(Attribute(name=col, type=AttributeType.STRING))
                 continue
 
             # Check for boolean (treat as nominal)
@@ -387,6 +393,8 @@ class ArffWriter:
                         date_format=date_columns[col],
                     )
                 )
+            elif pd.api.types.is_complex_dtype(dtype):
+                attributes.append(Attribute(name=col, type=AttributeType.STRING))
             elif col in string_columns:
                 attributes.append(Attribute(name=col, type=AttributeType.STRING))
             elif col in nominal_columns or isinstance(dtype, pd.CategoricalDtype):

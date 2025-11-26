@@ -12,6 +12,7 @@ Example:
 
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 
 import pandas as pd
@@ -62,6 +63,94 @@ class ArffConverter:
         )
         self.missing_value = missing_value
 
+    @staticmethod
+    def _apply_column_filters(
+        df: pd.DataFrame,
+        exclude_columns: list[str] | None,
+        nominal_columns: list[str] | None,
+        string_columns: list[str] | None,
+        date_columns: dict[str, str] | None,
+    ) -> tuple[pd.DataFrame, list[str], list[str], dict[str, str]]:
+        """Apply column exclusions and align type hints with the remaining columns."""
+        exclude_columns = exclude_columns or []
+        nominal_columns = nominal_columns or []
+        string_columns = string_columns or []
+        date_columns = date_columns or {}
+
+        missing_excludes = [col for col in exclude_columns if col not in df.columns]
+        if missing_excludes:
+            missing_list = ", ".join(missing_excludes)
+            raise CsvParseError(f"Exclude columns not found in CSV: {missing_list}")
+
+        filtered_df = df.drop(columns=exclude_columns) if exclude_columns else df
+        filtered_columns = set(filtered_df.columns)
+
+        filtered_nominal = [col for col in nominal_columns if col in filtered_columns]
+        filtered_string = [col for col in string_columns if col in filtered_columns]
+        filtered_dates = {
+            col: fmt for col, fmt in date_columns.items() if col in filtered_columns
+        }
+
+        return filtered_df, filtered_nominal, filtered_string, filtered_dates
+
+    @staticmethod
+    def _normalize_unnamed_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """Rename pandas-generated Unnamed columns to `Unnamed_<n>` without spaces/colons."""
+        new_cols: list[str] = []
+        for idx, col in enumerate(df.columns):
+            if isinstance(col, str) and col.startswith("Unnamed"):
+                # Typical pandas pattern: "Unnamed: <number>"
+                parts = col.split(":")
+                suffix = parts[1].strip() if len(parts) > 1 else str(idx)
+                if not suffix.isdigit():
+                    suffix = str(idx)
+                new_cols.append(f"Unnamed_{suffix}")
+            else:
+                new_cols.append(col)
+
+        if new_cols == list(df.columns):
+            return df
+
+        renamed = df.copy()
+        renamed.columns = new_cols
+        return renamed
+
+    @staticmethod
+    def _validate_column_alignment(
+        csv_path: Path,
+        df: pd.DataFrame,
+        csv_kwargs: dict[str, object],
+    ) -> None:
+        """Validate that the parsed DataFrame does not have more columns than the header."""
+        # Only validate when we have a header row
+        if csv_kwargs.get("header", "infer") is None:
+            return
+
+        delimiter = csv_kwargs.get("sep", csv_kwargs.get("delimiter", ","))
+        encoding = csv_kwargs.get("encoding", "utf-8")
+
+        try:
+            with csv_path.open("r", encoding=encoding, newline="") as f:
+                reader = csv.reader(f, delimiter=delimiter)
+                header = next(reader, None)
+
+                if not header:
+                    return
+
+                expected_columns = len(header)
+                if not expected_columns:
+                    return
+
+                for idx, row in enumerate(reader, start=2):  # start=2 accounts for header row
+                    if len(row) != expected_columns:
+                        raise CsvParseError(
+                            "CSV file has rows with a different number of columns than the header",
+                            row_number=idx,
+                        )
+        except OSError:
+            # If we cannot read the header, skip validation
+            return
+
     def csv_to_arff(
         self,
         csv_path: str | Path,
@@ -70,6 +159,7 @@ class ArffConverter:
         nominal_columns: list[str] | None = None,
         string_columns: list[str] | None = None,
         date_columns: dict[str, str] | None = None,
+        exclude_columns: list[str] | None = None,
         comments: list[str] | None = None,
         **csv_kwargs: object,
     ) -> ArffData:
@@ -83,6 +173,7 @@ class ArffConverter:
             nominal_columns: List of column names to treat as nominal attributes.
             string_columns: List of column names to treat as string attributes.
             date_columns: Dict mapping column names to date format strings.
+            exclude_columns: List of column names to exclude from the conversion.
             comments: List of comments to include in the ARFF file.
             **csv_kwargs: Additional keyword arguments passed to pd.read_csv().
 
@@ -108,6 +199,22 @@ class ArffConverter:
             df = pd.read_csv(csv_path, **csv_kwargs)
         except Exception as e:
             raise CsvParseError(f"Failed to read CSV file: {e}")
+
+        df = self._normalize_unnamed_columns(df)
+        self._validate_column_alignment(
+            csv_path=csv_path,
+            df=df,
+            csv_kwargs=csv_kwargs,
+        )
+
+        # Exclude requested columns
+        df, nominal_columns, string_columns, date_columns = self._apply_column_filters(
+            df=df,
+            exclude_columns=exclude_columns,
+            nominal_columns=nominal_columns,
+            string_columns=string_columns,
+            date_columns=date_columns,
+        )
 
         # Create ArffData
         arff_data = ArffWriter.from_dataframe(
@@ -166,6 +273,7 @@ class ArffConverter:
         nominal_columns: list[str] | None = None,
         string_columns: list[str] | None = None,
         date_columns: dict[str, str] | None = None,
+        exclude_columns: list[str] | None = None,
         comments: list[str] | None = None,
         **csv_kwargs: object,
     ) -> str:
@@ -177,6 +285,7 @@ class ArffConverter:
             nominal_columns: List of column names to treat as nominal.
             string_columns: List of column names to treat as string.
             date_columns: Dict mapping column names to date format strings.
+            exclude_columns: List of column names to exclude from the conversion.
             comments: List of comments to include.
             **csv_kwargs: Additional arguments passed to pd.read_csv().
 
@@ -195,6 +304,22 @@ class ArffConverter:
             df = pd.read_csv(csv_path, **csv_kwargs)
         except Exception as e:
             raise CsvParseError(f"Failed to read CSV file: {e}")
+
+        df = self._normalize_unnamed_columns(df)
+        self._validate_column_alignment(
+            csv_path=csv_path,
+            df=df,
+            csv_kwargs=csv_kwargs,
+        )
+
+        # Exclude requested columns
+        df, nominal_columns, string_columns, date_columns = self._apply_column_filters(
+            df=df,
+            exclude_columns=exclude_columns,
+            nominal_columns=nominal_columns,
+            string_columns=string_columns,
+            date_columns=date_columns,
+        )
 
         arff_data = ArffWriter.from_dataframe(
             df,
@@ -338,6 +463,7 @@ def csv_to_arff(
     string_columns: list[str] | None = None,
     date_columns: dict[str, str] | None = None,
     comments: list[str] | None = None,
+    exclude_columns: list[str] | None = None,
     missing_value: str = "?",
     **csv_kwargs: object,
 ) -> ArffData:
@@ -354,6 +480,7 @@ def csv_to_arff(
         string_columns: List of column names to treat as string.
         date_columns: Dict mapping column names to date format strings.
         comments: List of comments to include in the ARFF file.
+        exclude_columns: List of column names to exclude from the conversion.
         missing_value: String used to represent missing values.
         **csv_kwargs: Additional arguments passed to pd.read_csv().
 
@@ -372,6 +499,7 @@ def csv_to_arff(
         string_columns=string_columns,
         date_columns=date_columns,
         comments=comments,
+        exclude_columns=exclude_columns,
         **csv_kwargs,
     )
 

@@ -125,52 +125,51 @@ The package installs a command-line tool `arff-csv`:
 Before converting, you can analyze your CSV file to get suggestions for column types:
 
 ```bash
-arff-csv csv2arff data.csv --analyze
+arff-csv csv2arff iris.csv --analyze
 ```
 
 This will output:
 ```
 ======================================================================
-CSV ANALYSIS: data.csv
+CSV ANALYSIS: iris.csv
 ======================================================================
 
-Rows: 1448
-Columns: 8
+Rows: 150
+Columns: 6
 
 DATA PREVIEW (first 5 rows):
 ----------------------------------------------------------------------
-   d_SaO2_Abnormal_Low  CAD4COVIDarea  covid14d_yes  admission_no  ...
-0                    1       0.875101             0             1  ...
-1                    0      -0.291049             0             0  ...
-...
+   Unnamed_0  sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm)  class
+0           0                5.1               3.5                1.4               0.2      0
+1           1                4.9               3.0                1.4               0.2      0
+2           2                4.7               3.2                1.3               0.2      0
+3           3                4.6               3.1                1.5               0.2      0
+4           4                5.0               3.6                1.4               0.2      0
 
 COLUMN ANALYSIS:
 ----------------------------------------------------------------------
 Column                    Type       Unique   Nulls    Reason
 ----------------------------------------------------------------------
-d_SaO2_Abnormal_Low       NOMINAL    2        0        Binary values detected
-CAD4COVIDarea             NUMERIC    1400     0        Floating point values
-covid14d_yes              NOMINAL    2        0        Binary values detected
-admission_no              NOMINAL    2        0        Binary values detected
-duration_covid            NUMERIC    1200     0        Floating point values
-age                       NUMERIC    1300     0        Floating point values
-hospital_stay             NUMERIC    1100     0        Floating point values
-class                     NOMINAL    5        0        Common target/class column name
+Unnamed_0                 INTEGER    150      0        Integer values
+sepal length (cm)         NUMERIC    35       0        Floating point values
+sepal width (cm)          NUMERIC    23       0        Floating point values
+petal length (cm)         NUMERIC    43       0        Floating point values
+petal width (cm)          NUMERIC    22       0        Floating point values
+class                     NOMINAL    3        0        Common target/class column name
 
 SUGGESTED COMMAND:
 ----------------------------------------------------------------------
 
-arff-csv csv2arff data.csv data.arff \
-    --relation "data" \
-    --nominal d_SaO2_Abnormal_Low covid14d_yes admission_no class
+arff-csv csv2arff iris.csv iris.arff --relation "iris" --nominal \
+    class
 
 SUMMARY:
 ----------------------------------------------------------------------
-  Numeric columns:  4
-  Nominal columns:  4
+  Numeric columns:  5
+  Nominal columns:  1
   String columns:   0
 
-  Nominal: d_SaO2_Abnormal_Low, covid14d_yes, admission_no, class
+  Nominal: class
 ```
 
 **Analysis options:**
@@ -186,6 +185,7 @@ SUMMARY:
 - **Nominal columns**: Binary values (0/1, yes/no, true/false), columns named "class"/"target"/"label", integer columns with few unique values
 - **String columns**: Text with many unique values, long text (avg > 50 chars)
 - **Numeric columns**: Floating point values, integers with many unique values
+- **Exclusion suggestions**: Columns with a single unique value or an identifier-like unique value for every row
 
 #### Convert CSV to ARFF
 
@@ -198,6 +198,7 @@ arff-csv csv2arff input.csv output.arff \
     --relation "my_dataset" \
     --nominal class category \
     --string description \
+    --exclude id \
     --comment "Generated on 2024-01-15" \
     --verbose
 ```
@@ -209,6 +210,7 @@ arff-csv csv2arff input.csv output.arff \
 | `-r`, `--relation NAME` | Relation name | Input filename |
 | `-n`, `--nominal COL...` | Columns to treat as nominal | - |
 | `-s`, `--string COL...` | Columns to treat as string | - |
+| `--exclude COL...` | Columns to exclude from conversion | - |
 | `-m`, `--missing VALUE` | Missing value representation | `?` |
 | `-c`, `--comment TEXT...` | Comments to add | - |
 | `--delimiter CHAR` | CSV delimiter | `,` |

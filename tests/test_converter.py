@@ -92,6 +92,36 @@ class TestArffConverter:
         with pytest.raises(FileNotFoundError):
             converter.csv_to_arff("/nonexistent.csv", output_path)
 
+    def test_csv_to_arff_with_excluded_columns(
+        self, sample_csv_file: Path, temp_dir: Path
+    ) -> None:
+        """Test CSV to ARFF excluding specific columns."""
+        converter = ArffConverter()
+        output_path = temp_dir / "output.arff"
+
+        arff_data = converter.csv_to_arff(
+            sample_csv_file,
+            output_path,
+            exclude_columns=["id"],
+        )
+
+        assert "id" not in arff_data.data.columns
+        assert all(attr.name != "id" for attr in arff_data.attributes)
+
+    def test_csv_to_arff_exclude_missing_column(
+        self, sample_csv_file: Path, temp_dir: Path
+    ) -> None:
+        """Test error when excluding a column that does not exist."""
+        converter = ArffConverter()
+        output_path = temp_dir / "output.arff"
+
+        with pytest.raises(CsvParseError):
+            converter.csv_to_arff(
+                sample_csv_file,
+                output_path,
+                exclude_columns=["does_not_exist"],
+            )
+
     def test_arff_to_csv(
         self, sample_arff_file: Path, temp_dir: Path
     ) -> None:
@@ -223,6 +253,20 @@ class TestArffConverter:
         assert len(arff_data.data.columns) == 3
         assert "a" in arff_data.data.columns
 
+    def test_unnamed_columns_are_normalized(self, temp_dir: Path) -> None:
+        """Test that pandas Unnamed columns are renamed to Unnamed_<n>."""
+        csv_path = temp_dir / "unnamed.csv"
+        csv_path.write_text(",b,c\n1,2,3\n4,5,6")
+
+        converter = ArffConverter()
+        arff_path = temp_dir / "output.arff"
+
+        arff_data = converter.csv_to_arff(csv_path, arff_path)
+
+        assert "Unnamed_0" in arff_data.data.columns
+        attr_names = [a.name for a in arff_data.attributes]
+        assert "Unnamed_0" in attr_names
+
 
 class TestConvenienceFunctions:
     """Tests for convenience functions."""
@@ -283,7 +327,7 @@ class TestConvenienceFunctions:
         # Read the CSV and check for index column
         df = pd.read_csv(output_path)
         # First column should be unnamed (index)
-        assert "Unnamed: 0" in df.columns or df.columns[0].startswith("Unnamed")
+        assert "Unnamed_0" in df.columns or df.columns[0].startswith("Unnamed")
 
 
 class TestEdgeCases:

@@ -104,6 +104,14 @@ def create_parser() -> argparse.ArgumentParser:
         help="Column names to treat as string attributes",
     )
     csv2arff.add_argument(
+        "--exclude",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="COL",
+        help="Column names to exclude from the conversion",
+    )
+    csv2arff.add_argument(
         "-m",
         "--missing",
         type=str,
@@ -230,7 +238,8 @@ def create_parser() -> argparse.ArgumentParser:
 def analyze_column(
     series: pd.Series, 
     col_name: str, 
-    nominal_threshold: int
+    nominal_threshold: int,
+    total_rows: int | None = None,
 ) -> dict:
     """Analyze a single column and determine its suggested type.
     
@@ -238,6 +247,7 @@ def analyze_column(
         series: The pandas Series to analyze.
         col_name: Name of the column.
         nominal_threshold: Max unique values to consider nominal.
+        total_rows: Total rows in the dataset (used for exclusion suggestions).
         
     Returns:
         Dictionary with analysis results.
@@ -251,6 +261,8 @@ def analyze_column(
         "suggested_type": "NUMERIC",
         "reason": "",
         "sample_values": [],
+        "exclude_suggested": False,
+        "exclude_reason": None,
     }
     
     # Get sample values (non-null)
@@ -260,18 +272,33 @@ def analyze_column(
         result["sample_values"] = [str(v) for v in sample]
     
     unique_count = result["unique_count"]
+    non_null_count = result["non_null"]
+    total_rows = total_rows if total_rows is not None else len(series)
     
     # Check if column is numeric
     is_numeric = pd.api.types.is_numeric_dtype(series)
+
+    # Exclusion suggestions
+    if total_rows > 0 and unique_count <= 1:
+        result["exclude_suggested"] = True
+        result["exclude_reason"] = "Single unique value"
+    elif (
+        total_rows > 0
+        and non_null_count == total_rows
+        and unique_count == total_rows
+    ):
+        result["exclude_suggested"] = True
+        result["exclude_reason"] = "Unique value for every row"
     
-    # Check for binary/boolean patterns
-    if unique_count <= 2 and len(non_null) > 0:
-        unique_vals = set(str(v).lower().strip() for v in non_null.unique())
-        for binary_set in BINARY_VALUES:
-            if unique_vals.issubset(binary_set):
-                result["suggested_type"] = "NOMINAL"
-                result["reason"] = "Binary values detected"
-                return result
+    # Check for binary/boolean patterns (case-insensitive)
+    if len(non_null) > 0:
+        normalized_unique = set(str(v).lower().strip() for v in non_null.unique())
+        if len(normalized_unique) <= 2:
+            for binary_set in BINARY_VALUES:
+                if normalized_unique.issubset(binary_set):
+                    result["suggested_type"] = "NOMINAL"
+                    result["reason"] = "Binary values detected"
+                    return result
     
     # Check for "class" or "target" columns (common in ML datasets)
     col_lower = col_name.lower()
@@ -303,19 +330,20 @@ def analyze_column(
     
     # For string/object columns
     if series.dtype == object:
-        # Check if all values are short strings with few unique values
+        avg_len = non_null.astype(str).str.len().mean() if len(non_null) > 0 else 0
+        # Long text should be treated as string even with few unique values
+        if avg_len > 50:
+            result["suggested_type"] = "STRING"
+            result["reason"] = f"Long text (avg {avg_len:.0f} chars)"
+            return result
+
+        # Check if should be nominal
         if unique_count <= nominal_threshold:
             result["suggested_type"] = "NOMINAL"
             result["reason"] = f"Categorical with {unique_count} unique values (≤ {nominal_threshold})"
         else:
-            # Check average string length
-            avg_len = non_null.astype(str).str.len().mean() if len(non_null) > 0 else 0
-            if avg_len > 50:
-                result["suggested_type"] = "STRING"
-                result["reason"] = f"Long text (avg {avg_len:.0f} chars)"
-            else:
-                result["suggested_type"] = "STRING"
-                result["reason"] = f"Text with {unique_count} unique values (> {nominal_threshold})"
+            result["suggested_type"] = "STRING"
+            result["reason"] = f"Text with {unique_count} unique values (> {nominal_threshold})"
         return result
     
     # Default
@@ -336,6 +364,8 @@ def cmd_analyze_csv(args: argparse.Namespace) -> int:
     except Exception as e:
         print(f"Error reading CSV: {e}", file=sys.stderr)
         return 1
+    
+    df = ArffConverter._normalize_unnamed_columns(df)
     
     print("=" * 70)
     print(f"CSV ANALYSIS: {args.input}")
@@ -359,7 +389,12 @@ def cmd_analyze_csv(args: argparse.Namespace) -> int:
     
     analyses = []
     for col in df.columns:
-        analysis = analyze_column(df[col], col, args.nominal_threshold)
+        analysis = analyze_column(
+            df[col],
+            col,
+            args.nominal_threshold,
+            total_rows=len(df),
+        )
         analyses.append(analysis)
     
     # Print analysis in a formatted table
@@ -375,9 +410,21 @@ def cmd_analyze_csv(args: argparse.Namespace) -> int:
             f"{a['reason']}"
         )
     
+    exclude_suggestions = [
+        a for a in analyses if a.get("exclude_suggested")
+    ]
+
     # Collect nominal and string columns
     nominal_cols = [a["name"] for a in analyses if a["suggested_type"] == "NOMINAL"]
     string_cols = [a["name"] for a in analyses if a["suggested_type"] == "STRING"]
+    
+    if exclude_suggestions:
+        print()
+        print("COLUMNS SUGGESTED FOR EXCLUSION:")
+        print("-" * 70)
+        for a in exclude_suggestions:
+            reason = a.get("exclude_reason") or "Suggested for exclusion"
+            print(f"  - {a['name']}: {reason}")
     
     print()
     print("SUGGESTED COMMAND:")
@@ -397,6 +444,16 @@ def cmd_analyze_csv(args: argparse.Namespace) -> int:
     
     if string_cols:
         cmd_parts.extend(["--string"] + string_cols)
+
+    exclude_cols = []
+    if args.exclude:
+        exclude_cols.extend(args.exclude)
+    if exclude_suggestions:
+        for a in exclude_suggestions:
+            if a["name"] not in exclude_cols:
+                exclude_cols.append(a["name"])
+    if exclude_cols:
+        cmd_parts.extend(["--exclude"] + exclude_cols)
     
     if args.delimiter != ",":
         cmd_parts.extend(["--delimiter", f'"{args.delimiter}"'])
@@ -415,11 +472,16 @@ def cmd_analyze_csv(args: argparse.Namespace) -> int:
     print(f"  Numeric columns:  {numeric_count}")
     print(f"  Nominal columns:  {len(nominal_cols)}")
     print(f"  String columns:   {len(string_cols)}")
+    if exclude_suggestions:
+        print(f"  Suggested excludes: {len(exclude_suggestions)}")
     
     if nominal_cols:
         print(f"\n  Nominal: {', '.join(nominal_cols)}")
     if string_cols:
         print(f"  String:  {', '.join(string_cols)}")
+    if exclude_suggestions:
+        exclude_names = [a["name"] for a in exclude_suggestions]
+        print(f"  Exclude: {', '.join(exclude_names)}")
     
     print()
     
@@ -485,6 +547,7 @@ def cmd_csv2arff(args: argparse.Namespace) -> int:
             comments=args.comment,
             sep=args.delimiter,
             encoding=args.encoding,
+            exclude_columns=args.exclude,
         )
 
         if args.verbose:
