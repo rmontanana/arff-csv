@@ -140,11 +140,11 @@ Columns: 6
 DATA PREVIEW (first 5 rows):
 ----------------------------------------------------------------------
    Unnamed_0  sepal length (cm)  sepal width (cm)  petal length (cm)  petal width (cm)  class
-0           0                5.1               3.5                1.4               0.2      0
-1           1                4.9               3.0                1.4               0.2      0
-2           2                4.7               3.2                1.3               0.2      0
-3           3                4.6               3.1                1.5               0.2      0
-4           4                5.0               3.6                1.4               0.2      0
+0          0                5.1               3.5                1.4               0.2      0
+1          1                4.9               3.0                1.4               0.2      0
+2          2                4.7               3.2                1.3               0.2      0
+3          3                4.6               3.1                1.5               0.2      0
+4          4                5.0               3.6                1.4               0.2      0
 
 COLUMN ANALYSIS:
 ----------------------------------------------------------------------
@@ -157,19 +157,25 @@ petal length (cm)         NUMERIC    43       0        Floating point values
 petal width (cm)          NUMERIC    22       0        Floating point values
 class                     NOMINAL    3        0        Common target/class column name
 
+COLUMNS SUGGESTED FOR EXCLUSION:
+----------------------------------------------------------------------
+  - Unnamed_0: Unique value for every row
+
 SUGGESTED COMMAND:
 ----------------------------------------------------------------------
 
 arff-csv csv2arff iris.csv iris.arff --relation "iris" --nominal \
-    class
+    class --exclude Unnamed_0
 
 SUMMARY:
 ----------------------------------------------------------------------
   Numeric columns:  5
   Nominal columns:  1
   String columns:   0
+  Suggested excludes: 1
 
   Nominal: class
+  Exclude: Unnamed_0
 ```
 
 **Analysis options:**
