@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 import numpy as np
 import pandas as pd
@@ -222,7 +222,7 @@ class ArffWriter:
                 values.append(formatted)
             file_obj.write(",".join(values) + "\n")
 
-    def _format_value(self, value: object, attr: Attribute) -> str:
+    def _format_value(self, value: Any, attr: Attribute) -> str:
         """Format a value for ARFF output."""
         # Handle missing values
         if pd.isna(value):
@@ -401,7 +401,7 @@ class ArffWriter:
                 else:
                     # Convert column values to strings for consistency
                     # This ensures the values match the nominal categories
-                    def convert_to_str(x):
+                    def convert_to_str(x: Any) -> Any:
                         if pd.isna(x):
                             return x
                         if isinstance(x, (int, np.integer)):

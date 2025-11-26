@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 
@@ -259,18 +260,18 @@ def analyze_column(
         sample = non_null.head(5).tolist()
         result["sample_values"] = [str(v) for v in sample]
 
-    unique_count = result["unique_count"]
-    non_null_count = result["non_null"]
-    total_rows = total_rows if total_rows is not None else len(series)
+    unique_count = cast("int", result["unique_count"])
+    non_null_count = cast("int", result["non_null"])
+    total_rows_int = len(series) if total_rows is None else int(total_rows)
 
     # Check if column is numeric
     is_numeric = pd.api.types.is_numeric_dtype(series)
 
     # Exclusion suggestions
-    if total_rows > 0 and unique_count <= 1:
+    if total_rows_int > 0 and unique_count <= 1:
         result["exclude_suggested"] = True
         result["exclude_reason"] = "Single unique value"
-    elif total_rows > 0 and non_null_count == total_rows and unique_count == total_rows:
+    elif total_rows_int > 0 and non_null_count == total_rows_int and unique_count == total_rows_int:
         result["exclude_suggested"] = True
         result["exclude_reason"] = "Unique value for every row"
 
@@ -476,8 +477,8 @@ def cmd_analyze_csv(args: argparse.Namespace) -> int:
 
 def _split_command(parts: list[str], max_line_len: int = 70) -> list[str]:
     """Split command into multiple lines for readability."""
-    lines = []
-    current_line = []
+    lines: list[str] = []
+    current_line: list[str] = []
     current_len = 0
 
     for part in parts:

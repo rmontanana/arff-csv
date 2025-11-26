@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -116,15 +117,15 @@ class ArffConverter:
     @staticmethod
     def _validate_column_alignment(
         csv_path: Path,
-        csv_kwargs: dict[str, object],
+        csv_kwargs: dict[str, Any],
     ) -> None:
         """Validate that the parsed DataFrame does not have more columns than the header."""
         # Only validate when we have a header row
         if csv_kwargs.get("header", "infer") is None:
             return
 
-        delimiter = csv_kwargs.get("sep", csv_kwargs.get("delimiter", ","))
-        encoding = csv_kwargs.get("encoding", "utf-8")
+        delimiter = str(csv_kwargs.get("sep", csv_kwargs.get("delimiter", ",")))
+        encoding = str(csv_kwargs.get("encoding", "utf-8"))
 
         try:
             with csv_path.open("r", encoding=encoding, newline="") as f:
@@ -158,7 +159,7 @@ class ArffConverter:
         date_columns: dict[str, str] | None = None,
         exclude_columns: list[str] | None = None,
         comments: list[str] | None = None,
-        **csv_kwargs: object,
+        **csv_kwargs: Any,
     ) -> ArffData:
         """Convert a CSV file to ARFF format.
 
@@ -234,7 +235,7 @@ class ArffConverter:
         arff_path: str | Path,
         csv_path: str | Path,
         include_index: bool = False,
-        **csv_kwargs: object,
+        **csv_kwargs: Any,
     ) -> pd.DataFrame:
         """Convert an ARFF file to CSV format.
 
@@ -271,7 +272,7 @@ class ArffConverter:
         date_columns: dict[str, str] | None = None,
         exclude_columns: list[str] | None = None,
         comments: list[str] | None = None,
-        **csv_kwargs: object,
+        **csv_kwargs: Any,
     ) -> str:
         """Convert a CSV file to ARFF string.
 
@@ -333,7 +334,7 @@ class ArffConverter:
         self,
         arff_path: str | Path,
         include_index: bool = False,
-        **csv_kwargs: object,
+        **csv_kwargs: Any,
     ) -> str:
         """Convert an ARFF file to CSV string.
 
@@ -346,7 +347,7 @@ class ArffConverter:
             CSV content as a string.
         """
         arff_data = self.parser.parse_file(arff_path)
-        return arff_data.data.to_csv(index=include_index, **csv_kwargs)
+        return str(arff_data.data.to_csv(index=include_index, **csv_kwargs))
 
     def dataframe_to_arff(
         self,
@@ -460,7 +461,7 @@ def csv_to_arff(
     comments: list[str] | None = None,
     exclude_columns: list[str] | None = None,
     missing_value: str = "?",
-    **csv_kwargs: object,
+    **csv_kwargs: Any,
 ) -> ArffData:
     """Convert a CSV file to ARFF format.
 
@@ -504,7 +505,7 @@ def arff_to_csv(
     csv_path: str | Path,
     include_index: bool = False,
     missing_value: str = "?",
-    **csv_kwargs: object,
+    **csv_kwargs: Any,
 ) -> pd.DataFrame:
     """Convert an ARFF file to CSV format.
 

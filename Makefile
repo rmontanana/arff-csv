@@ -56,7 +56,7 @@ format:
 	ruff format src tests
 
 typecheck:
-	mypy src
+	MYPYPATH=src mypy -p arff_csv
 
 check: lint typecheck
 	@echo "All checks passed!"
